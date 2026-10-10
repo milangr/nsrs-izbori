@@ -22,7 +22,7 @@
 .tiphead{display:flex;align-items:center;gap:10px;min-height:38px}
 .tipphoto{width:52px;height:70px;flex:0 0 auto;object-fit:cover;object-position:center top;border-radius:6px;background:#eef2f6}
 .tipphoto[hidden]{display:none}
-.controls{grid-template-columns:repeat(2,minmax(0,1fr))}
+.controls{grid-template-columns:minmax(220px,360px)}
 .tablewrap{overflow-x:auto;overscroll-behavior-x:contain}
 .tablehead,.personrow,.axis{grid-template-columns:minmax(125px,18%) minmax(175px,21%) minmax(70px,9%) minmax(135px,19%) minmax(75px,10%) minmax(120px,15%) minmax(62px,8%);min-width:920px}
 .tablehead{position:sticky;top:0;background:#fff;z-index:3}
@@ -32,7 +32,7 @@
 .partycell{display:flex;align-items:center;gap:7px;min-width:0}
 .partylogo{width:30px;height:30px;flex:0 0 30px;border-radius:7px;display:grid;place-items:center;background:var(--party-color);color:#fff;font-size:9px;font-weight:800;letter-spacing:-.03em;text-align:center;line-height:1}
 .partyinfo{min-width:0}.partycode{font-size:11px;font-weight:700}.partydesc{font-size:9px;color:#778294;line-height:1.2;margin-top:2px;white-space:normal}
-@media(max-width:760px){.controls{grid-template-columns:1fr 1fr}.tablewrap{padding-bottom:5px}.tablehead,.personrow,.axis{min-width:880px}.partylogo{width:26px;height:26px;flex-basis:26px}}
+@media(max-width:760px){.controls{grid-template-columns:1fr}.tablewrap{padding-bottom:5px}.tablehead,.personrow,.axis{min-width:880px}.partylogo{width:26px;height:26px;flex-basis:26px}}
 .datatable{width:100%;min-width:920px;border-collapse:collapse;table-layout:fixed}
 .datatable col:nth-child(1){width:18%}.datatable col:nth-child(2){width:21%}.datatable col:nth-child(3){width:9%}.datatable col:nth-child(4){width:19%}.datatable col:nth-child(5){width:10%}.datatable col:nth-child(6){width:15%}.datatable col:nth-child(7){width:8%}
 .datatable th,.datatable td{padding:6px 9px 6px 0;vertical-align:middle;text-align:left;min-width:0}
@@ -129,7 +129,7 @@ function metric(x,k){return k==='name'?x.name:k==='party'?x.party:k==='py'?x.py:
 function make(cls,text){const e=document.createElement('div');e.className=cls;if(text!==undefined)e.textContent=text;return e}
 function makeCell(cls,text){const e=document.createElement('td');e.className=cls;if(text!==undefined)e.textContent=text;return e}
 function makePartyCell(party){const meta=partyMeta[party]||{logo:party.slice(0,3),title:party,color:'#52677a'},cell=make('partycell'),logo=make('partylogo',meta.logo),info=make('partyinfo'),code=make('partycode',party),desc=make('partydesc',meta.title);logo.style.setProperty('--party-color',meta.color);logo.setAttribute('aria-hidden','true');info.append(code,desc);cell.append(logo,info);return cell}
-const oldSort=$('sort'),oldDirection=$('direction');oldSort.closest('.field').remove();oldDirection.closest('.field').remove();$('expand').remove();$('collapse').remove();
+const oldSort=$('sort'),oldDirection=$('direction'),oldScale=$('scale');oldSort.closest('.field').remove();oldDirection.closest('.field').remove();oldScale.closest('.field').remove();$('expand').remove();$('collapse').remove();
 document.querySelector('.intro').textContent='Poređenje glasova pojedinačnih kandidata u jednoj tabeli. Kliknite zaglavlje bilo koje kolone za sortiranje.';
 const legacyHead=document.querySelector('.tablehead'),legacyAxis=document.querySelector('.axis'),legacyRows=$('rows'),tableWrap=document.createElement('div'),table=document.createElement('table'),colgroup=document.createElement('colgroup'),thead=document.createElement('thead'),tableHead=document.createElement('tr'),rows=document.createElement('tbody');
 tableWrap.className='tablewrap';table.className='datatable';table.setAttribute('aria-label','Poređenje glasova poslanika 2022. i 2026. godine');rows.id='rows';
@@ -187,14 +187,12 @@ function tooltip(d,evt,stick=false){
 function draw(){
   const chosen=data.filter(d=>$('party').value==='all'||d.party===$('party').value);
   const vm=Math.max(...chosen.map(d=>Math.abs(metric(d,'pct'))),1)*1.08;
-  const global=Math.max(...data.map(x=>Math.max(x.py,x.ac)))*1.06;
-  const partyMax=new Map(parties.map(p=>[p,Math.max(...data.filter(d=>d.party===p).map(d=>Math.max(d.py,d.ac)))*1.06]));
   const items=[...chosen].sort((a,b)=>{const v=metric(a,sortKey),w=metric(b,sortKey),cmp=typeof v==='string'?v.localeCompare(w,'sr'):v-w;return (sortDirection==='desc'?-cmp:cmp)||a.i-b.i});
   rows.replaceChildren();
-  $('axmain').innerHTML=$('scale').value==='party'?'<span>0</span><span>po stranci</span>':`<span>0</span><span>${fmt(($('scale').value==='cap'?15000:global)/2)}</span><span>${fmt($('scale').value==='cap'?15000:global)}</span>`;
+  $('axmain').innerHTML=`<span>0</span><span>${fmt(7500)}</span><span>${fmt(15000)}</span>`;
   $('axvar').innerHTML=`<span>−${Math.round(vm)+'%'}</span><span>0</span><span>+${Math.round(vm)+'%'}</span>`;
   for(const d of items){
-    const max=$('scale').value==='global'?global:$('scale').value==='cap'?15000:partyMax.get(d.party);
+    const max=15000;
     const row=document.createElement('tr');row.className='personrow';
     row.tabIndex=0;
     row.setAttribute('aria-label',`${d.name}, ${d.party}, 2022: ${fmt(d.py)}, 2026: ${fmt(d.ac)}, promjena ${signed(d.ac-d.py)}`);
@@ -220,7 +218,7 @@ function draw(){
   tableHead.querySelectorAll('.sorthead').forEach(button=>{const active=button.dataset.sort===sortKey;button.parentElement.setAttribute('aria-sort',active?(sortDirection==='asc'?'ascending':'descending'):'none');button.querySelector('.sortarrow').textContent=active?(sortDirection==='asc'?'▲':'▼'):''})
 }
 tableHead.addEventListener('click',e=>{const button=e.target.closest('.sorthead');if(!button)return;const key=button.dataset.sort;if(sortKey===key)sortDirection=sortDirection==='asc'?'desc':'asc';else{sortKey=key;sortDirection=(key==='name'||key==='party')?'asc':'desc'}draw()});
-['party','scale'].forEach(id=>$(id).addEventListener('change',draw));$('closeTip').onclick=()=>{pinned=null;$('tip').classList.remove('visible')};document.addEventListener('keydown',e=>{if(e.key==='Escape'){$('tip').classList.remove('visible');pinned=null}});document.addEventListener('click',e=>{if(!e.target.closest('.personrow,.tip')){pinned=null;$('tip').classList.remove('visible')}});
+$('party').addEventListener('change',draw);$('closeTip').onclick=()=>{pinned=null;$('tip').classList.remove('visible')};document.addEventListener('keydown',e=>{if(e.key==='Escape'){$('tip').classList.remove('visible');pinned=null}});document.addEventListener('click',e=>{if(!e.target.closest('.personrow,.tip')){pinned=null;$('tip').classList.remove('visible')}});
 $('csv').onclick=()=>{const vals=[['Partija','Poslanik','Glasovi 2022','Glasovi 2026','Razlika glasova','Promjena %'],...data.map(d=>[d.party,d.name,d.py,d.ac,d.ac-d.py,(100*(d.ac/d.py-1)).toFixed(2)])];const txt='\ufeff'+vals.map(a=>a.map(x=>'"'+String(x).replaceAll('"','""')+'"').join(';')).join('\r\n');const a=document.createElement('a'),url=URL.createObjectURL(new Blob([txt],{type:'text/csv;charset=utf-8'}));a.href=url;a.download='nsrs-glasovi-2022-2026.csv';a.click();setTimeout(()=>URL.revokeObjectURL(url),3000)};
 draw();
 </script></body></html>
