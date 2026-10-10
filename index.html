@@ -33,6 +33,17 @@
 .partylogo{width:30px;height:30px;flex:0 0 30px;border-radius:7px;display:grid;place-items:center;background:var(--party-color);color:#fff;font-size:9px;font-weight:800;letter-spacing:-.03em;text-align:center;line-height:1}
 .partyinfo{min-width:0}.partycode{font-size:11px;font-weight:700}.partydesc{font-size:9px;color:#778294;line-height:1.2;margin-top:2px;white-space:normal}
 @media(max-width:760px){.controls{grid-template-columns:1fr 1fr}.tablewrap{padding-bottom:5px}.tablehead,.personrow,.axis{min-width:880px}.partylogo{width:26px;height:26px;flex-basis:26px}}
+.datatable{width:100%;min-width:920px;border-collapse:collapse;table-layout:fixed}
+.datatable col:nth-child(1){width:18%}.datatable col:nth-child(2){width:21%}.datatable col:nth-child(3){width:9%}.datatable col:nth-child(4){width:19%}.datatable col:nth-child(5){width:10%}.datatable col:nth-child(6){width:15%}.datatable col:nth-child(7){width:8%}
+.datatable th,.datatable td{padding:6px 9px 6px 0;vertical-align:middle;text-align:left;min-width:0}
+.datatable thead tr:first-child th{border-bottom:1px solid #cfd6df;background:#fff;font-size:12px;font-weight:700}
+.datatable .axisrow th{padding-top:4px;padding-bottom:4px;color:#8792a1;font-size:10px;font-weight:400}
+.datatable .personrow{display:table-row;min-width:0;min-height:0}
+.datatable .personrow td{border-bottom:1px solid #edf0f4}
+.datatable .personrow:hover td,.datatable .personrow:focus-visible td{background:#f2f6fa}
+.datatable .numeric{text-align:right}.datatable .sorthead{text-align:left}.datatable th.numeric .sorthead{text-align:right}
+.datatable .axmain,.datatable .axvar{display:flex;justify-content:space-between;padding-right:0}
+@media(max-width:760px){.datatable{min-width:880px}.datatable th,.datatable td{padding-right:6px}.datatable thead tr:first-child th{font-size:10px}.datatable .axisrow th{font-size:9px}}
 </style>
 </head><body><main class="wrap"><h1>Glasovi poslanika NS RS · 2022–2026.</h1><p class="intro">Poređenje glasova pojedinačnih kandidata, grupisanih po partijama. Bez sabiranja glasova po partijama.</p><section class="panel"><div class="controls"><div class="field"><label for="party">Partija</label><select id="party"><option value="all">Sve partije</option></select></div><div class="field"><label for="sort">Sortiraj unutar partije</label><select id="sort"><option value="ac">Glasovi 2026.</option><option value="py">Glasovi 2022.</option><option value="delta">Razlika glasova</option><option value="pct">Promjena %</option><option value="name">Ime i prezime</option></select></div><div class="field"><label for="direction">Redoslijed</label><select id="direction"><option value="desc">Opadajuće</option><option value="asc">Rastuće</option></select></div><div class="field"><label for="scale">Skala bullet charta</label><select id="scale"><option value="cap">Zajednička do 15.000 · izuzeci označeni</option><option value="party">Unutar partije</option><option value="global">Puna zajednička skala</option></select></div></div><div class="legend"><span><i class="key"></i> Glasovi 2026.</span><span><i class="tickkey"></i> Glasovi 2022.</span><span>Razlika = 2026 − 2022</span><span>↗ označava vrijednost izvan skale grafikona</span></div><div class="buttons"><button id="expand">Otvori sve</button><button id="collapse">Skupi sve</button><button id="csv">Preuzmi CSV</button></div><div class="tablehead"><div>Poslanik</div><div class="numeric">Glasovi<br>2026.</div><div>2026. / 2022.<span class="sub">Bullet chart</span></div><div class="numeric">Razlika<br>glasova</div><div>Promjena %<span class="sub">Grafikon</span></div><div class="numeric">Promjena<br>%</div></div><div class="axis"><div></div><div></div><div class="axmain" id="axmain"></div><div></div><div class="axvar" id="axvar"></div><div></div></div><div id="rows"></div><div class="note">Napomena: Uporedni rezultati pojedinačnih kandidata ne predstavljaju ukupan rezultat partije. Podaci za 2026. u izvornoj analizi su preliminarni. Za podrazumijevanu skalu do 15.000 glasova vrijednosti izvan raspona prikazane su oznakom ↗. Njihove stvarne vrijednosti ostaju u numeričkoj koloni i tooltipu; dužina odrezane trake nije proporcionalna punoj vrijednosti.</div><p class="foot">Izvor: <a href="https://www.nezavisne.com/novosti/bih/59-poslanika-NS-RS-htjelo-novi-mandat-Uporedili-smo-glasove-iz-2022-i-2026/986774" target="_blank" rel="noopener">Nezavisne novine — poređenje izbora 2022. i 2026.</a> · Dodirnite red na telefonu ili pređite mišem preko grafikona da vidite obje vrijednosti i promjene.</p></section></main><div class="tip" id="tip" role="status" aria-live="polite"><button class="closeTip" id="closeTip" aria-label="Zatvori">×</button><strong id="tipname"></strong><hr><div class="tr"><span>Glasovi 2022.</span><span id="tipPY"></span></div><div class="tr"><span>Glasovi 2026.</span><span id="tipAC"></span></div><div class="tr"><span>Razlika glasova</span><span id="tipD"></span></div><div class="tr"><span>Promjena %</span><span id="tipP"></span></div></div>
 <script>
@@ -116,13 +127,16 @@ const partyMeta={
 };
 function metric(x,k){return k==='name'?x.name:k==='party'?x.party:k==='py'?x.py:k==='ac'?x.ac:k==='delta'?x.ac-x.py:100*(x.ac/x.py-1)}
 function make(cls,text){const e=document.createElement('div');e.className=cls;if(text!==undefined)e.textContent=text;return e}
+function makeCell(cls,text){const e=document.createElement('td');e.className=cls;if(text!==undefined)e.textContent=text;return e}
 function makePartyCell(party){const meta=partyMeta[party]||{logo:party.slice(0,3),title:party,color:'#52677a'},cell=make('partycell'),logo=make('partylogo',meta.logo),info=make('partyinfo'),code=make('partycode',party),desc=make('partydesc',meta.title);logo.style.setProperty('--party-color',meta.color);logo.setAttribute('aria-hidden','true');info.append(code,desc);cell.append(logo,info);return cell}
 const oldSort=$('sort'),oldDirection=$('direction');oldSort.closest('.field').remove();oldDirection.closest('.field').remove();$('expand').remove();$('collapse').remove();
 document.querySelector('.intro').textContent='Poređenje glasova pojedinačnih kandidata u jednoj tabeli. Kliknite zaglavlje bilo koje kolone za sortiranje.';
-const tableHead=document.querySelector('.tablehead'),axis=document.querySelector('.axis'),rows=$('rows'),tableWrap=document.createElement('div');tableWrap.className='tablewrap';tableHead.before(tableWrap);tableWrap.append(tableHead,axis,rows);
-const columns=[['name','Poslanik'],['party','Stranka'],['ac','Glasovi 2026.'],['py','2026. / 2022.'],['delta','Razlika glasova'],['pct','Promjena %'],['pct','Promjena %']];
-tableHead.replaceChildren(...columns.map(([key,label])=>{const cell=document.createElement('div'),button=document.createElement('button'),arrow=document.createElement('span');button.type='button';button.className='sorthead';button.dataset.sort=key;button.textContent=label;button.title='Sortiraj po koloni: '+label;arrow.className='sortarrow';arrow.setAttribute('aria-hidden','true');button.append(arrow);cell.append(button);return cell}));
-axis.innerHTML='<div></div><div></div><div></div><div class="axmain" id="axmain"></div><div></div><div class="axvar" id="axvar"></div><div></div>';
+const legacyHead=document.querySelector('.tablehead'),legacyAxis=document.querySelector('.axis'),legacyRows=$('rows'),tableWrap=document.createElement('div'),table=document.createElement('table'),colgroup=document.createElement('colgroup'),thead=document.createElement('thead'),tableHead=document.createElement('tr'),rows=document.createElement('tbody');
+tableWrap.className='tablewrap';table.className='datatable';table.setAttribute('aria-label','Poređenje glasova poslanika 2022. i 2026. godine');rows.id='rows';
+for(let i=0;i<7;i++)colgroup.append(document.createElement('col'));
+const columns=[['name','Poslanik',false],['party','Stranka',false],['ac','Glasovi 2026.',true],['py','2026. / 2022.',false],['delta','Razlika glasova',true],['pct','Promjena %',false],['pct','Promjena %',true]];
+columns.forEach(([key,label,numeric],index)=>{const cell=document.createElement('th'),button=document.createElement('button'),arrow=document.createElement('span');cell.scope='col';cell.setAttribute('aria-sort','none');if(numeric)cell.className='numeric';button.type='button';button.className='sorthead';button.dataset.sort=key;button.textContent=label;button.title='Sortiraj po koloni: '+label;arrow.className='sortarrow';arrow.setAttribute('aria-hidden','true');button.append(arrow);cell.append(button);if(index===3){const scale=document.createElement('div');scale.className='axmain';scale.id='axmain';cell.append(scale)}if(index===5){const scale=document.createElement('div');scale.className='axvar';scale.id='axvar';cell.append(scale)}tableHead.append(cell)});
+legacyHead.before(tableWrap);thead.append(tableHead);table.append(colgroup,thead,rows);tableWrap.append(table);legacyHead.remove();legacyAxis.remove();legacyRows.remove();
 function tooltip(d,evt,stick=false){
   pinned=stick?d:null;
   const nameEl=$('tipname');
@@ -181,22 +195,22 @@ function draw(){
   $('axvar').innerHTML=`<span>−${Math.round(vm)+'%'}</span><span>0</span><span>+${Math.round(vm)+'%'}</span>`;
   for(const d of items){
     const max=$('scale').value==='global'?global:$('scale').value==='cap'?15000:partyMax.get(d.party);
-    const row=make('personrow');
+    const row=document.createElement('tr');row.className='personrow';
     row.tabIndex=0;
     row.setAttribute('aria-label',`${d.name}, ${d.party}, 2022: ${fmt(d.py)}, 2026: ${fmt(d.ac)}, promjena ${signed(d.ac-d.py)}`);
-    row.append(make('name',d.name));
-    row.append(makePartyCell(d.party));
-    row.append(make('numeric actual',fmt(d.ac)));
+    row.append(makeCell('name',d.name));
+    const partyCell=makeCell('partycolumn');partyCell.append(makePartyCell(d.party));row.append(partyCell);
+    row.append(makeCell('numeric actual',fmt(d.ac)));
     const bullet=make('bulletcell'),track=make('track'),bar=make('bar'),mark=make('mark');
     bar.style.width=Math.min(100,100*d.ac/max)+'%';
     mark.style.left=`calc(${Math.min(99.3,100*d.py/max)}% - 1px)`;
     track.append(bar,mark);
     if(d.ac>max||d.py>max){const flag=make('overflowflag','↗');track.classList.add('overflow');flag.title='Najmanje jedna vrijednost prelazi prikazanu skalu';track.append(flag)}
-    bullet.append(track);row.append(bullet);
-    row.append(make('numeric delta',signed(d.ac-d.py)));
+    bullet.append(track);const bulletCell=makeCell('bulletcolumn');bulletCell.append(bullet);row.append(bulletCell);
+    row.append(makeCell('numeric delta',signed(d.ac-d.py)));
     const varcell=make('vary'),vtrack=make('vtrack'),zero=make('zero'),vbar=make('vbar'),value=metric(d,'pct'),width=Math.min(50,50*Math.abs(value)/vm);
-    vbar.style.width=width+'%';vbar.style.left=(value>=0?50:50-width)+'%';vbar.classList.add(value>=0?'up':'down');vtrack.append(zero,vbar);varcell.append(vtrack);row.append(varcell);
-    row.append(make('numeric vvalue '+(value>=0?'positive':'negative'),percentage(value)));
+    vbar.style.width=width+'%';vbar.style.left=(value>=0?50:50-width)+'%';vbar.classList.add(value>=0?'up':'down');vtrack.append(zero,vbar);varcell.append(vtrack);const variationCell=makeCell('variationcolumn');variationCell.append(varcell);row.append(variationCell);
+    row.append(makeCell('numeric vvalue '+(value>=0?'positive':'negative'),percentage(value)));
     row.addEventListener('mousemove',e=>{if(!pinned)tooltip(d,e)});
     row.addEventListener('mouseleave',()=>{if(!pinned)$('tip').classList.remove('visible')});
     row.addEventListener('click',e=>tooltip(d,e,true));
